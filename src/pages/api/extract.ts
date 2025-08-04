@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ) {
         try {
           extractedText += await extractDocxTextFromBuffer(buffer) + "\n";
-        } catch (e) {
+        } catch {
           extractedText += `[Failed to extract DOCX: ${fileName}]\n`;
         }
       } else if (
@@ -84,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ) {
         try {
           extractedText += await extractPdfTextFromBuffer(buffer) + "\n";
-        } catch (e) {
+        } catch {
           extractedText += `[Failed to extract PDF: ${fileName}]\n`;
         }
       } else if (
@@ -93,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ) {
         try {
           extractedText += await extractImageTextFromBuffer(buffer) + "\n";
-        } catch (e) {
+        } catch {
           extractedText += `[Failed to extract image text: ${fileName}]\n`;
         }
       } else {

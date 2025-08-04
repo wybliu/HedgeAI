@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     
     // If files were uploaded, add file information to context
     if (files && files.length > 0) {
-      context += `\n\nUploaded files: ${files.map((f: any) => f.name).join(', ')}`;
+      context += `\n\nUploaded files: ${files.map((f: { name: string }) => f.name).join(', ')}`;
       context += `\nPlease analyze the content from these files and provide appropriate feedback.`;
     }
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       context += `\n\nPrevious conversation context:\n`;
       // Include last 5 messages for context (to avoid token limits)
       const recentHistory = chatHistory.slice(-5);
-      recentHistory.forEach((msg: any) => {
+      recentHistory.forEach((msg: { role: string; content: string }) => {
         context += `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}\n`;
       });
       context += `\nPlease consider this conversation history when responding.`;

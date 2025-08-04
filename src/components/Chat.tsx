@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -146,7 +146,7 @@ export default function Chat({ sessionId }: ChatProps) {
   };
 
   // Load messages for a specific session
-  const loadSessionMessages = async (sessionId: string) => {
+  const loadSessionMessages = useCallback(async (sessionId: string) => {
     if (!user) return;
     
     setLoading(true);
@@ -218,7 +218,7 @@ export default function Chat({ sessionId }: ChatProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -229,7 +229,7 @@ export default function Chat({ sessionId }: ChatProps) {
               if (e.detail.role === "user") {
           setMessages(prev => {
             // Use the latest pendingAI value
-            let lastPending = pendingAI;
+            const lastPending = pendingAI;
             if (lastPending && lastPending.length > 0) {
               return [...prev, { role: "ai", content: lastPending }, e.detail];
             } else {
@@ -410,7 +410,7 @@ export default function Chat({ sessionId }: ChatProps) {
         }
       ]);
     }
-  }, [sessionId, user]);
+  }, [sessionId, user, loadSessionMessages]);
 
   // Debug markdown rendering
   useEffect(() => {

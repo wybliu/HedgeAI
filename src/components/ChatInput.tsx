@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 
@@ -16,7 +16,7 @@ export default function ChatInput({ sessionId }: ChatInputProps) {
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isStopPressed, setIsStopPressed] = useState(false);
-  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string; created_at: string }>>([]);
   const dropRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
@@ -65,23 +65,6 @@ export default function ChatInput({ sessionId }: ChatInputProps) {
 
     loadChatHistory();
   }, [currentSessionId, user]);
-
-  useEffect(() => {
-    const typingStateHandler = (e: any) => setTimeout(() => setIsAITyping(!!e.detail), 0);
-    const savePartialAIHandler = (e: CustomEvent) => {
-      if (e.detail && e.detail.content) {
-        saveMessage('ai', e.detail.content);
-      }
-    };
-    
-    window.addEventListener("hedge-typing-state", typingStateHandler);
-    window.addEventListener("save-partial-ai", savePartialAIHandler as EventListener);
-    
-    return () => {
-      window.removeEventListener("hedge-typing-state", typingStateHandler);
-      window.removeEventListener("save-partial-ai", savePartialAIHandler as EventListener);
-    };
-  }, []);
 
   // Create or get session ID
   const getOrCreateSession = async (): Promise<string> => {
@@ -133,7 +116,7 @@ export default function ChatInput({ sessionId }: ChatInputProps) {
   };
 
   // Save message to database
-  const saveMessage = async (role: 'user' | 'ai', content: string, files?: any[]) => {
+  const saveMessage = useCallback(async (role: 'user' | 'ai', content: string, files?: Array<{ name: string; type: string; size: number }>) => {
     try {
       const sessionId = await getOrCreateSession();
       console.log(`Saving ${role} message to session:`, sessionId);
@@ -185,7 +168,29 @@ export default function ChatInput({ sessionId }: ChatInputProps) {
     } catch (error) {
       console.error('Error saving message:', error);
     }
-  };
+  }, [user, currentSessionId]);
+
+  // Event listeners for typing state and partial AI saves
+  useEffect(() => {
+    const typingStateHandler = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setTimeout(() => setIsAITyping(!!customEvent.detail), 0);
+    };
+    const savePartialAIHandler = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.content) {
+        saveMessage('ai', customEvent.detail.content);
+      }
+    };
+    
+    window.addEventListener("hedge-typing-state", typingStateHandler);
+    window.addEventListener("save-partial-ai", savePartialAIHandler);
+    
+    return () => {
+      window.removeEventListener("hedge-typing-state", typingStateHandler);
+      window.removeEventListener("save-partial-ai", savePartialAIHandler);
+    };
+  }, [saveMessage]);
 
   // Drag and drop handlers
   useEffect(() => {
@@ -256,7 +261,7 @@ export default function ChatInput({ sessionId }: ChatInputProps) {
     window.dispatchEvent(new CustomEvent("hedge-typing-state", { detail: true }));
     const controller = new AbortController();
     setAbortController(controller);
-    let content = input;
+    const content = input;
     let fileMeta: { name: string; type: string; size: number }[] = [];
     let extractedText = content;
     if (files.length > 0) {
@@ -296,7 +301,7 @@ export default function ChatInput({ sessionId }: ChatInputProps) {
           });
           const data = await res.json();
           extractedText = data.text || content;
-        } catch (err) {
+        } catch {
           window.dispatchEvent(new CustomEvent("chat-message", { detail: { role: "ai", content: "Sorry, file extraction failed. Please try again." } }));
           setLoading(false);
           setIsAITyping(false);
@@ -406,7 +411,7 @@ export default function ChatInput({ sessionId }: ChatInputProps) {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               if (!loading && (input.trim() || files.length > 0)) {
-                handleSubmit(e as any);
+                handleSubmit(e as React.FormEvent);
               }
             }
           }}

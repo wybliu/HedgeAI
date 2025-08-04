@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -30,13 +31,9 @@ export default function Sidebar({
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadChatSessions();
-    }
-  }, [user]);
 
-  const loadChatSessions = async () => {
+
+  const loadChatSessions = useCallback(async () => {
     try {
       // First try to load from chat_sessions table
       const { data: sessions, error: sessionsError } = await supabase
@@ -102,7 +99,13 @@ export default function Sidebar({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
+    }
+  }, [user, loadChatSessions]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -208,9 +211,11 @@ export default function Sidebar({
         <div className="border-t border-gray-200 p-4 flex-shrink-0">
           <div className="flex items-center gap-3">
             {user?.user_metadata?.avatar_url ? (
-              <img 
+              <Image 
                 src={user.user_metadata.avatar_url} 
                 alt="Profile" 
+                width={32}
+                height={32}
                 className="w-8 h-8 rounded-full"
               />
             ) : (
